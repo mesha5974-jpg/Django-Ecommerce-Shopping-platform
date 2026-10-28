@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% load store_tags %}
+
+{% block title %}Checkout{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <h1>Checkout</h1>
+</section>
+
+<div class="cart-layout">
+  <form class="form-card" method="post" novalidate>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <div class="msg msg--error" role="alert">
+        {{ form.non_field_errors }}
+      </div>
+    {% endif %}
+
+    <fieldset class="fieldset">
+      <legend>Delivery details</legend>
+
+      {% for field in form %}
+        {% if field.name != "payment_method" %}
+          <div class="field {% if field.errors %}has-error{% endif %}">
+            <label class="field-label" for="{{ field.id_for_label }}">
+              {{ field.label }}
+            </label>
+
+            {{ field|add_class:"input" }}
+
+            {% if field.help_text %}
+              <p class="help">{{ field.help_text }}</p>
+            {% endif %}
+
+            {% for err in field.errors %}
+              <p class="error">{{ err }}</p>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endfor %}
+    </fieldset>
+
+    {% if form.payment_method %}
+      <fieldset class="fieldset">
+        <legend>Payment method</legend>
+
+        <div class="pay-options">
+          {% for radio in form.payment_method %}
+            <label class="pay-option" for="{{ radio.id_for_label }}">
+              {{ radio.tag }}
+              <span class="pay-title">{{ radio.choice_label }}</span>
+            </label>
+          {% endfor %}
+        </div>
+
+        <p class="help">
+          Cash on delivery: pay the courier when your order arrives.
+          Card payment is a demo and charges nothing.
+        </p>
+
+        {% for err in form.payment_method.errors %}
+          <p class="error">{{ err }}</p>
+        {% endfor %}
+      </fieldset>
+    {% endif %}
+
+    <button class="btn btn--block" type="submit">
+      Place order · {{ total_amount|money }}
+    </button>
+  </form>
+
+  <aside class="summary">
+    <h2>In your order</h2>
+
+    {% if cart_items %}
+      <ul class="mini-list">
+        {% for item in cart_items %}
+          <li>
+            <span>
+              {{ item.quantity }} × {{ item.product.name }}
+            </span>
+            <span>{{ item.total_price|money }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+
+      <dl class="summary-rows">
+        <div class="summary-total">
+          <dt>Total</dt>
+          <dd>{{ total_amount|money }}</dd>
+        </div>
+      </dl>
+
+    {% else %}
+      <p>Your cart is empty.</p>
+    {% endif %}
+
+    <a class="btn btn--ghost btn--block" href="{% url 'cart' %}">
+      Edit cart
+    </a>
+  </aside>
+</div>
+{% endblock %}

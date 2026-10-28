@@ -1,0 +1,115 @@
+
+{% extends "base.html" %}
+{% load store_tags %}
+
+{% block title %}Admin - Manage Orders{% endblock %}
+
+{% block content %}
+
+<section class="page-head">
+    <h1>Manage Orders</h1>
+    <p>View orders and update their status.</p>
+</section>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="msg" role="status">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+{% if orders %}
+<div style="overflow-x:auto;">
+    <table style="width:100%; border-collapse:collapse; text-align:left;">
+
+        <thead>
+            <tr style="border-bottom:2px solid #ddd;">
+                <th style="padding:12px;">Order ID</th>
+                <th style="padding:12px;">Customer</th>
+                <th style="padding:12px;">Created At</th>
+                <th style="padding:12px;">Amount</th>
+                <th style="padding:12px;">Status</th>
+                <th style="padding:12px;">Update Status</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for order in orders %}
+            <tr style="border-bottom:1px solid #ddd;">
+
+                <td style="padding:12px;">
+                    #{{ order.pk }}
+                </td>
+
+                <td style="padding:12px;">
+                    <strong>{{ order.full_name }}</strong>
+                    <br>
+                    <small>{{ order.user.email }}</small>
+                </td>
+
+                <td style="padding:12px;">
+                    {{ order.created_at|date:"d M Y, h:i A" }}
+                </td>
+
+                <td style="padding:12px;">
+                    <strong>{{ order.total_amount|money }}</strong>
+                </td>
+
+                <td style="padding:12px;">
+                    <span class="status status--{{ order.status }}">
+                        {{ order.get_status_display }}
+                    </span>
+                </td>
+
+                <td style="padding:12px;">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <input
+                            type="hidden"
+                            name="order_id"
+                            value="{{ order.pk }}"
+                        >
+
+                        <select
+                            name="status"
+                            required
+                            style="padding:8px; margin-bottom:8px;"
+                        >
+                            {% for value, label in status_choices %}
+                                <option
+                                    value="{{ value }}"
+                                    {% if order.status == value %}
+                                        selected
+                                    {% endif %}
+                                >
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+
+                        <button
+                            type="submit"
+                            class="btn btn--small"
+                        >
+                            Update Status
+                        </button>
+                    </form>
+                </td>
+
+            </tr>
+            {% endfor %}
+        </tbody>
+
+    </table>
+</div>
+
+{% else %}
+<div class="empty">
+    <h2>No orders found</h2>
+    <p>Customer orders will appear here after checkout.</p>
+</div>
+{% endif %}
+
+{% endblock %}

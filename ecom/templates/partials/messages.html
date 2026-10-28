@@ -1,0 +1,10 @@
+{% if messages %}
+<div class="wrap messages" role="region" aria-label="Notifications">
+  {% for message in messages %}
+    <div class="msg msg--{{ message.tags|default:'info' }}" role="{% if message.level >= 40 %}alert{% else %}status{% endif %}">
+      <span>{{ message }}</span>
+      <button class="msg-close" type="button" aria-label="Dismiss" onclick="this.parentElement.remove()">&times;</button>
+    </div>
+  {% endfor %}
+</div>
+{% endif %}

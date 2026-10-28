@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% load store_tags %}
+
+{% block title %}Order #{{ order.pk }}{% endblock %}
+
+{% block content %}
+<nav class="crumbs" aria-label="Breadcrumb">
+  <a href="{% url 'order_history' %}">My orders</a><span aria-hidden="true">/</span><span>#{{ order.pk }}</span>
+</nav>
+
+<section class="page-head page-head--row">
+  <h1>Order #{{ order.pk }}</h1>
+  <span class="status status--{{ order.status }}">{{ order.get_status_display }}</span>
+</section>
+
+<div class="cart-layout">
+  <ul class="cart-list">
+    {% for item in order.items.all %}
+    <li class="cart-row cart-row--static hue-{{ item.product.category|hue }}">
+      <div class="cart-thumb">
+        {% if item.product.image %}<img src="{{ item.product.image.url }}" alt="">{% else %}<span class="card-placeholder">{{ item.product.name|slice:":1" }}</span>{% endif %}
+      </div>
+      <div class="cart-info">
+        <a class="cart-name" href="{{ item.product.get_absolute_url }}">{{ item.product.name }}</a>
+         <p class="muted">
+        {{ item.product.description|default:"No description available." }}
+    </p><br>
+        <p class="muted">{{ item.price|money }} × {{ item.quantity }}</p>
+      </div>
+      <p class="cart-line">{{ item.get_cost|money }}</p>
+    </li>
+    {% endfor %}
+  </ul>
+
+  <aside class="summary">
+    <h2>Details</h2>
+    <dl class="summary-rows">
+      <div><dt>Placed</dt><dd>{{ order.created_at|date:"j M Y" }}</dd></div>
+      <div><dt>Payment</dt><dd>{{ order.get_payment_method_display|default:order.payment }}</dd></div>
+      <div class="summary-total"><dt>Total</dt><dd>{{ order.total_amount|money }}</dd></div>
+    </dl>
+    <p class="muted">Ships to {{ order.full_name }}, {{ order.address }}, {{ order.city }}</p>
+  </aside>
+</div>
+{% endblock %}

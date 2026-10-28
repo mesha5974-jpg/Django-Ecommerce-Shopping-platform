@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% load store_tags %}
+
+{% block title %}{{ product.name }}{% endblock %}
+
+{% block content %}
+<nav class="crumbs" aria-label="Breadcrumb">
+  <a href="{% url 'product_list' %}">Shop</a>
+  <span aria-hidden="true">/</span>
+  <a href="{{ product.category.get_absolute_url }}">{{ product.category.name }}</a>
+</nav>
+
+<section class="detail hue-{{ product.category|hue }}">
+  <div class="detail-media">
+    {% if product.image %}
+      <img src="{{ product.image.url }}" alt="{{ product.name }}">
+    {% else %}
+      <span class="card-placeholder card-placeholder--big">{{ product.name|slice:":1" }}</span>
+    {% endif %}
+  </div>
+
+  <div class="detail-info">
+    <p class="card-cat">{{ product.category.name }}</p>
+    <h1>{{ product.name }}</h1>
+    <p class="detail-price">{{ product.price|money }}</p>
+
+    {% if product.stock > 0 %}
+      <p class="stock stock--in">{% if product.stock <= 5 %}Only {{ product.stock }} left{% else %}In stock{% endif %}</p>
+    {% else %}
+      <p class="stock stock--out">Sold out</p>
+    {% endif %}
+
+    <div class="prose">{{ product.description|linebreaks }}</div>
+
+    {% if product.stock > 0 %}
+    {% comment %} {% url 'cart:add' product.pk %} {% endcomment %}
+    <form class="buy" action="#!" method="post">
+      {% csrf_token %}
+      <label class="field-label" for="qty">Quantity</label>
+      <select id="qty" name="quantity" class="input input--qty">
+        {% for n in product.stock|quantity_range %}<option value="{{ n }}">{{ n }}</option>{% endfor %}
+      </select>
+      <button class="btn" type="submit">Add to cart</button>
+    </form>
+    {% endif %}
+  </div>
+</section>
+
+{% if related %}
+<section class="related">
+  <h2>More in {{ product.category.name }}</h2>
+  <div class="grid">
+    {% for item in related %}{% product_card item %}{% endfor %}
+  </div>
+</section>
+{% endif %}
+{% endblock %}

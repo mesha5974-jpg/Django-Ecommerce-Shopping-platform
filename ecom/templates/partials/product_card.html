@@ -1,0 +1,47 @@
+{% load store_tags %}
+<article class="card hue-{{ product.category|hue }}">
+  <a class="card-media" href="{{ product.get_absolute_url }}" tabindex="-1" aria-hidden="true">
+    {% if product.image %}
+      <img src="{{ product.image.url }}" alt="" loading="lazy">
+    {% else %}
+      <span class="card-placeholder">{{ product.name|slice:":1" }}</span>
+    {% endif %}
+    <span class="price-tag">{{ product.price|money }}</span>
+  </a>
+  <div class="card-body">
+    <p class="card-cat">{{ product.category.name }}</p>
+    <h3 class="card-title"><a href="{% url 'product_detail' product.pk %}">{{ product.name }}</a></h3>
+    {% if product.stock > 0 %}
+      <form class="card-add" action="{% url 'cart_add' product.pk %}" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="quantity" value="1">
+        <button class="btn btn--small" type="submit">Add to cart</button>
+      </form>
+    {% else %}
+      <p class="stock stock--out">Sold out</p>
+    {% endif %}
+    {% if request.user.is_staff %}
+      <div class="admin-actions">
+        <a href="{% url 'product_edit' product.pk %}"
+           class="admin-icon edit-icon"
+           title="Edit product"
+           aria-label="Edit {{ product.name }}">
+          <i class="fa-solid fa-pen-to-square"></i>
+        </a>
+
+       
+      <form method="post"
+      action="{% url 'product_delete' product.pk %}"
+      style="display: inline;">
+    {% csrf_token %}
+    <button type="submit"
+            class="admin-icon delete-icon"
+            title="Delete product"
+            aria-label="Delete {{ product.name }}">
+        <i class="fa-solid fa-trash"></i>
+    </button>
+</form>
+ </div>
+    {% endif %}
+  </div>
+</article>

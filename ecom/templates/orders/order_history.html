@@ -1,0 +1,53 @@
+
+{% extends "base.html" %}
+{% load store_tags %}
+
+{% block title %}My orders{% endblock %}
+
+{% block content %}
+<section class="page-head">
+    <h1>My orders</h1>
+</section>
+
+{% if orders %}
+<ul class="order-list">
+    {% for order in orders %}
+    <li class="order-row">
+        <div>
+            <a class="order-id" href="{% url 'order_detail' order.pk %}">
+                Order #{{ order.pk }}
+            </a>
+
+            <p class="muted">
+                {{ order.created_at|date:"j M Y, H:i" }}
+                · {{ order.items.count }} item{{ order.items.count|pluralize }}
+            </p>
+        </div>
+
+        <span class="status status--{{ order.status }}">
+            {{ order.get_status_display }}
+        </span>
+
+        <p class="order-total">
+            {{ order.total_amount|money }}
+        </p>
+
+        <a class="btn btn--small btn--ghost"
+           href="{% url 'order_detail' order.pk %}">
+            View
+        </a>
+    </li>
+    {% endfor %}
+</ul>
+
+{% else %}
+<div class="empty">
+    <h2>No orders yet</h2>
+    <p>Once you place an order it will be listed here.</p>
+
+    <a class="btn" href="{% url 'product_list' %}">
+        Start shopping
+    </a>
+</div>
+{% endif %}
+{% endblock %}
