@@ -4,18 +4,30 @@ __pycache__/
 *.py[cod]
 *.pyc
 
-# Virtual environment
+# Virtual environments
 venv/
 .venv/
 env/
 
-# Django secret settings
+# Environment variables and secrets
 .env
 .env.*
 !.env.example
 
 # Local database
 db.sqlite3
+db.sqlite3-journal
 
-# Uploaded files (optional)
-# media/
+# User-uploaded media
+media/
+
+# Static files collected for deployment
+staticfiles/
+
+# IDE settings
+.vscode/
+.idea/
+
+# Operating system files
+.DS_Store
+Thumbs.db

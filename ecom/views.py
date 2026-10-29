@@ -13,9 +13,10 @@ from django.views.generic import ListView,DetailView,CreateView,UpdateView,Delet
 from .forms import RegistrationForm,LoginForm,ProductAddForm,OrderForm
 from .models import Category,Product,OrderItem,Order
 from django.contrib.auth import login,logout,authenticate
+from django.contrib.auth.mixins import UserPassesTestMixin
 
 # Create your views here.
-class Homeview(ListView,View):
+class Homeview(View):
     def get(self,request):
         products = Product.objects.all()
         categories = Category.objects.all()
@@ -57,6 +58,7 @@ class LoginView(View):
                if user is not None:
                 login(request,user)
                 return redirect("product_list")
+               
             messages.error(request,"Email or Password is Invalid")
         return render(request,"registration/login.html",{"form":form})
 
@@ -67,7 +69,7 @@ class LogoutView(View):
 
 class ProductListView(ListView):
     model = Product
-    template_name = "store/Product_list.html"
+    template_name = "store/product_list.html"
     context_object_name = "products"
     queryset = Product.objects.filter(is_available=True).order_by('?')
 
@@ -79,19 +81,23 @@ class ProductDetailView(DetailView):
 class CategoryView(View):
     def get(self,request,slug):
         category = get_object_or_404(Category, slug=slug)
-        products = Product.objects.filter(category = category)
+        products = Product.objects.filter(category = category,is_available=True)
         return render (request,"store/product_list.html",{'category':category,'products':products})
 
-class ProductAddView(CreateView):
+class ProductAddView(LoginRequiredMixin,UserPassesTestMixin,CreateView):
+    login_url = "/login/"
     model = Product
     form_class = ProductAddForm
     template_name = "store/add_product.html"
     success_url = reverse_lazy("product_list")
 
+    def test_func(self):
+        return self.request.user.is_staff
+
     def form_valid(self, form):
         category_name = form.cleaned_data['category'].strip()
         category_slug = slugify(category_name)
-        if category_slug is None:
+        if not category_slug:
             form.add_error("category","Please enter slug")
             return self.form_invalid(form)
 
@@ -99,32 +105,44 @@ class ProductAddView(CreateView):
         form.instance.category = category
         return super().form_valid(form)
 
-class ProductEditView(UpdateView):
+class ProductEditView(LoginRequiredMixin,UserPassesTestMixin,UpdateView):
+    login_url = "/login/"
     model = Product
     form_class = ProductAddForm
     template_name = "store/add_product.html"
     success_url = reverse_lazy("product_list")
+
+    def test_func(self):
+        return self.request.user.is_staff
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["is_edit"] = True
         return context
+    
     def get_initial(self):
         initial =  super().get_initial()
         initial["category"] = self.object.category.name
         return initial
+    
     def form_valid(self, form):
         category_name = form.cleaned_data["category"].strip()
         category_slug = slugify(category_name)
+
         if not category_slug:
             form.add_error("category","please enter category..")
             return self.form_invalid(form)
+        
         category,create = Category.objects.get_or_create(slug=category_slug,defaults={"name":category_name})
         form.instance.category = category
         return super().form_valid(form)
 
-class ProductDeleteView(DeleteView):
+class ProductDeleteView(LoginRequiredMixin,UserPassesTestMixin,DeleteView):
+    login_url = "/login/"
     model = Product
     success_url = reverse_lazy("product_list")
+    def test_func(self):
+        return self.request.user.is_staff
 
 class CartAddView(View):
     def post(self,request,pk):
@@ -134,7 +152,7 @@ class CartAddView(View):
         product_id = str(pk)
         current_quantity = int(cart.get(product_id ,0))
 
-        if current_quantity +1 > product.stock:
+        if current_quantity + 1 > product.stock:
             messages.error(request,f'{product.name} is out of stock..')
             return redirect("product_list")
         
@@ -167,36 +185,45 @@ class CartView(View):
         return render(request,"cart/detail.html",{'cart_items':cart_items,'total':total})
 
 class CartUpdateView(View):
-    def post(self,request,pk):
-        cart = request.session.get("cart",{})
-        product_id = str(pk)
-        product = get_object_or_404(Product,pk=pk,is_available = True)
-        if product_id not in cart:
-            messages.error(request,f"{product.name} is not in cart")
-            return redirect('cart')
-        try:
-           quantity = int(self.request.POST.get("quantity",1))
+  
+  def post(self, request, pk):
+    cart = request.session.get("cart", {})
+    product_id = str(pk)
 
-        except (TypeError,ValueError):
-            messages.error(request,"Invalid quantity")
-            return redirect('cart')
-        if quantity<1:
-            messages.error(request,"Quantity must be 1")
-        elif quantity >product.stock:
-            messages.error(request,"Quantity out of stock")
-        else:
+    product = get_object_or_404(
+        Product, pk=pk, is_available=True
+    )
 
-            cart[product_id] = quantity
-            request.session['cart'] = cart
-            request.session.modified = True
-            messages.success(request,"Cart quantity is updated!")
-            return redirect('cart')
+    if product_id not in cart:
+        messages.error(request, "Product is not in cart.")
+        return redirect("cart")
+
+    try:
+        quantity = int(request.POST.get("quantity", 1))
+    except (TypeError, ValueError):
+        messages.error(request, "Invalid quantity.")
+        return redirect("cart")
+
+    if quantity < 1:
+        messages.error(request, "Quantity must be at least 1.")
+        return redirect("cart")
+
+    if quantity > product.stock:
+        messages.error(request, "Quantity exceeds available stock.")
+        return redirect("cart")
+
+    cart[product_id] = quantity
+    request.session["cart"] = cart
+    request.session.modified = True
+
+    messages.success(request, "Cart quantity updated!")
+    return redirect("cart")
 
 class CartRemoveView(View):
     def post(self,request,pk):
         cart = request.session.get("cart",{})
         product_id = str(pk)
-        del cart[product_id]
+        cart.pop(product_id,None)
         request.session['cart'] = cart
         request.session.modified = True
         messages.success(request,"Product is remove!")
@@ -207,10 +234,10 @@ class CartClearView(View):
     def post(self,request):
         request.session['cart'] = {}
         request.session.modified = True
-        messages.success(request,"your Cart is Empty!")
+        messages.success(request,"Your Cart is Empty!")
         return redirect('cart')
 
-class CheckOutView(LoginRequiredMixin , View):
+class CheckOutView(LoginRequiredMixin, View):
     login_url = '/login/'   
 
     def get(self,request):
@@ -242,79 +269,87 @@ class CheckOutView(LoginRequiredMixin , View):
 
             return render(request,"orders/checkout.html",{'cart':cart,'form':form,"cart_items":cart_items,"total_amount":total_amount})
     
-    def post(self, request):
-            form = OrderForm(request.POST)
-            cart = request.session.get('cart', {})
-        
-            if not cart:
-                messages.error(request, "Your cart is Empty!!")
-                return redirect('cart')
-        
-            if not form.is_valid():
-                return render(request, "orders/checkout.html", {
-                                    'cart': cart,
-                                    'cart_items': [],
-                                    'total_amount': Decimal("0.00"),
-                                    'form': form
-                                })
-                        
-            if form.cleaned_data.get("payment_method") == "card":
-                    form.add_error(
-                       "payment_method",
-                        "Online card payment is not available yet. Please select Cash on Delivery.")
 
-                    return render(request, "orders/checkout.html", {
-                      'cart': cart,
-                      'cart_items': [],
-                      'total_amount': Decimal("0.00"),
-                      'form': form
-                })
-        
-            cart_items = []
-            total_amount = Decimal("0.00")
-        
-            try:
+    def post(self, request):
+        form = OrderForm(request.POST)
+        cart = request.session.get("cart", {})
+
+        if not cart:
+            messages.error(request, "Your cart is empty!")
+            return redirect("cart")
+
+        if not form.is_valid():
+            return render(request, "orders/checkout.html", {
+                "cart": cart,
+                "cart_items": [],
+                "total_amount": Decimal("0.00"),
+                "form": form,
+            })
+
+        if form.cleaned_data.get("payment") == "Card":
+            form.add_error(
+                "payment",
+                "Online card payment is not available yet. "
+                "Please select Cash on Delivery."
+            )
+            return render(request, "orders/checkout.html", {
+                "cart": cart,
+                "cart_items": [],
+                "total_amount": Decimal("0.00"),
+                "form": form,
+            })
+
+        cart_items = []
+        total_amount = Decimal("0.00")
+
+        try:
+            with transaction.atomic():
+                # Lock and validate every product before creating the order.
                 for product_id, quantity in cart.items():
-                    product = Product.objects.get(
+                    product = Product.objects.select_for_update().get(
                         pk=int(product_id),
-                        is_available=True
+                        is_available=True,
                     )
                     quantity = int(quantity)
-        
+
                     if quantity < 1 or quantity > product.stock:
                         messages.error(
                             request,
-                            f'Insufficient stock for {product.name}!'
+                            f"Insufficient stock for {product.name}!"
                         )
-                        return redirect('cart')
-        
+                        return redirect("cart")
+
                     cart_items.append((product, quantity))
                     total_amount += product.price * quantity
-        
-                with transaction.atomic():
-                    order = form.save(commit=False)
-                    order.user = request.user
-                    order.total_amount = total_amount
-                    order.save()
-        
-                    for product, quantity in cart_items:
-                        product.stock -= quantity
-                        product.save(update_fields=['stock'])
-        
-                        OrderItem.objects.create(
-                            order=order,
-                            product=product,
-                            price=product.price,
-                            quantity=quantity
-                        )
-        
-            except (ValueError, TypeError, Product.DoesNotExist):
-                messages.error(request,"A product is invalid or no longer available.")
-                return redirect('cart')
-        
-            request.session['cart'] = {}
-            messages.success(request, "Your order is placed!")
-            return redirect("order_success", pk=order.pk)
+
+                order = form.save(commit=False)
+                order.user = request.user
+                order.total_amount = total_amount
+                order.save()
+
+                for product, quantity in cart_items:
+                    OrderItem.objects.create(
+                        order=order,
+                        product=product,
+                        price=product.price,
+                        quantity=quantity,
+                    )
+
+                    product.stock -= quantity
+                    product.save(update_fields=["stock"])
+
+        except (ValueError, TypeError, Product.DoesNotExist):
+            messages.error(
+                request,
+                "A product is invalid or no longer available."
+            )
+            return redirect("cart")
+
+        request.session["cart"] = {}
+        request.session.modified = True
+
+        messages.success(request, "Your order has been placed!")
+        return redirect("order_success", pk=order.pk)
 
         
 class OrderHistoryView(LoginRequiredMixin,ListView):
@@ -330,10 +365,16 @@ class OrderDetailView(LoginRequiredMixin,DetailView):
     login_url = '/login/'   
     template_name = "orders/order_detail.html"
     context_object_name = "order"
+    def get_queryset(self):
+        return Order.objects.filter(user=self.request.user)
 
 from django.core.mail import send_mail
 
-class EmailConfirmationView(View):
+class EmailConfirmationView(UserPassesTestMixin,View):
+
+    def test_func(self):
+        return self.request.user.is_staff
+    
     def get(self,request):
         orders = Order.objects.all()
         return render(request,"admin.html",{"orders":orders,"status_choices": Order.STATUS_CHOICES})
@@ -381,7 +422,7 @@ class EmailConfirmationView(View):
                          [order.user.email],fail_silently=False
                     )
         messages.success(request, "Confirmation emails processed...")
-        return redirect("order_history")
+        return redirect("admin_confirm")
 
 class OrderSuccessView(LoginRequiredMixin,DetailView):
     model = Order

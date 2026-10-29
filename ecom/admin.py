@@ -13,7 +13,7 @@ class CategoryAdmin(admin.ModelAdmin):
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     list_display = ('name','category','price','stock','created_at','is_available')
-    action = [mark_unavailable]
+    actions = [mark_unavailable]
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):

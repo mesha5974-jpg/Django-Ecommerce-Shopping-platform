@@ -8,10 +8,19 @@ class RegistrationForm(UserCreationForm):
     class Meta:
         model = User
         fields = ["username","email","password1","password2"]
+    def clean_email(self):
+        email = self.cleaned_data["email"].strip()
+
+        if User.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError(
+                "An account with this email already exists."
+            )
+
+        return email
 
 class LoginForm(forms.Form):
     email = forms.EmailField(required = True)
-    password = forms.CharField()
+    password = forms.CharField(widget=forms.PasswordInput)
 
 class ProductAddForm(forms.ModelForm):
     category = forms.CharField(
