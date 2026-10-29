@@ -59,33 +59,6 @@ Django-Ecommerce-Shopping-platform/
 └── README.md
 ```
 
-## Screenshots
-
-Screenshots of the application can be added here to demonstrate the user interface and main features.
-
-To add screenshots:
-
-1. Create a `screenshots` folder in the project root.
-2. Add screenshots of the homepage, product listing, product details, shopping cart, checkout, and order history.
-3. Uncomment and update the Markdown examples below with the correct image paths.
-
-<!--
-### Homepage
-![Homepage](screenshots/homepage.png)
-
-### Product Listing
-![Product Listing](screenshots/product-list.png)
-
-### Shopping Cart
-![Shopping Cart](screenshots/cart.png)
-
-### Checkout
-![Checkout](screenshots/checkout.png)
-
-### Order History
-![Order History](screenshots/order-history.png)
--->
-
 ## Getting Started
 
 Follow these steps to set up the project locally.
