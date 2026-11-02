@@ -51,8 +51,9 @@
         <a class="cart-link {% active 'cart:detail' %}" href="{% url 'cart' %}">
           Cart
           {% cart_count as n %}
-          <span class="cart-badge{% if not n %} is-empty{% endif %}">{{ n }}</span>
-        </a>
+         <span class="cart-badge{% if not cart_count %} is-empty{% endif %}">
+        {{ cart_count }}
+    </span>        </a>
       </nav>
     </div>
 
